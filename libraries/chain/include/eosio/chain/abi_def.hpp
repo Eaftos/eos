@@ -291,11 +291,8 @@ ST& operator >> (ST& s, eosio::chain::kv_tables_as_object<T>& v) {
    return s;
 }
 
-
 template<typename T>
 void to_variant(const eosio::chain::kv_tables_as_object<T>& o, fc::variant& v) {
-    //to_variant( e.value, v);
-    std::cout << "++++++++++++++++to_variant kv_tables_as_object" << std::endl;
     //EOS_ASSERT( v.is_object(), invalid_type_inside_abi, "variant is not an variant_object type");
 
     //map<table_name, kv_table_def>
@@ -304,48 +301,42 @@ void to_variant(const eosio::chain::kv_tables_as_object<T>& o, fc::variant& v) {
 
     for (const auto &table : kv_tables) {// kv_table_def
        mutable_variant_object vo_table;
-       vo_table("type", table.second.type);
-       variant primary_index;
-       //to_variant(table.second.primary_index, primary_index);
-       vo_table("primary_index", primary_index);
+       vo_table("type", variant(table.second.type));
 
+       variant primary_index;
+       to_variant(table.second.primary_index, primary_index);
+       vo_table("primary_index", primary_index);
+       
        mutable_variant_object secondary_indices;
        for(const auto &sec_index : table.second.secondary_indices) {
           variant sidx;
-          //to_variant(sec_index.second, sidx);
+          to_variant(sec_index.second, sidx);
           secondary_indices(sec_index.first.to_string(), sidx);
        }
-       vo_table("secondary_indices", secondary_indices);
-       vo_tables(table.first.to_string(), vo_table);
+       vo_table("secondary_indices", variant(secondary_indices));
+       vo_tables(table.first.to_string(), variant(vo_table));
     }
-    v = vo_tables;
+    v = variant(vo_tables);
 }
 
 template<typename T>
 void from_variant(const fc::variant& v, eosio::chain::kv_tables_as_object<T>& o) {
-    //from_variant( v, e.value );
-    std::cout << "++++++++++++++++from_variant kv_tables_as_object" << std::endl;
     //EOS_ASSERT( v.is_object(), eosio::chain::invalid_type_inside_abi, "variant is not an variant_object type");
 
     auto &kv_tables = o.value;
     const auto& tables = v.get_object();
 
     for(const auto table_it : tables) {
-        std::cout << "************* iterate kv_tables key = " << table_it.key() << std::endl;
-        const variant_object table_obj = table_it.value().get_object();
+        const auto &table_obj = table_it.value().get_object();
         eosio::chain::kv_table_def kv_tbl_def;
         from_variant(table_obj["type"], kv_tbl_def.type);
-
         from_variant(table_obj["primary_index"], kv_tbl_def.primary_index);
-
         if (const auto st_it = table_obj.find("secondary_indices"); st_it != table_obj.end()) {
-            const auto sec_indices_obj = st_it->value().get_object();
+            const auto &sec_indices_obj = st_it->value().get_object();
             for (const auto sidx_it : sec_indices_obj) {
-                const auto sec_index_obj = sidx_it.value().get_object();
                 eosio::chain::secondary_index_def idx_def;
-                from_variant(sec_index_obj["type"], idx_def.type);
+                from_variant(sidx_it.value(), idx_def);
                 kv_tbl_def.secondary_indices[eosio::chain::index_name(sidx_it.key())] = idx_def;
-                std::cout << "secondary_index name" << sidx_it.key() << " type=" << idx_def.type << std::endl;
             }
         }
         kv_tables[eosio::chain::name(table_it.key())] = kv_tbl_def;

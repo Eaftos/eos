@@ -614,8 +614,8 @@ namespace eosio { namespace chain {
    }
 
    kv_table_def abi_serializer::get_kv_table_type(name action)const {
-      //auto itr = kv_tables.find(action);
-      //if( itr != kv_tables.end() ) return itr->second;
+      auto itr = kv_tables.find(action);
+      if( itr != kv_tables.end() ) return itr->second;
       return kv_table_def();
    }
 

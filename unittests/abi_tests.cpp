@@ -2,6 +2,7 @@
 #include <vector>
 #include <iterator>
 #include <cstdlib>
+#include <sstream>
 
 #include <boost/test/unit_test.hpp>
 
@@ -98,9 +99,7 @@ fc::variant verify_type_round_trip_conversion( const abi_serializer& abis, const
 BOOST_AUTO_TEST_CASE(setabi_test)
 {
    try {
-
-
-   const char* abi_string = R"=====(
+   const string abi_string = R"=====(
       {
         "version": "eosio::abi/1.0",
         "types": [{
@@ -130,112 +129,58 @@ BOOST_AUTO_TEST_CASE(setabi_test)
                     "sidc": {"type": "sha256"}
                 }
             }
-
         },
        "ricardian_clauses": [],
        "abi_extensions": []
       }
    )=====";
 
-
-   auto var = fc::json::from_string(abi_string);
+   auto var = fc::json::from_string(abi_string.c_str());
    auto abi = var.as<abi_def>();
+   fc::variant v1;
+   fc::variant v2;
+   kv_tables_as_object<map<table_name, kv_table_def>> kv_tables_obj;
 
-   variant v;
-   eosio::chain::kv_tables_as_object<map<name, kv_table_def>> o;
-   //to_variant(abi, v);
-   //from_variant(v, o);
+   to_variant(abi.kv_tables, v1);
+   from_variant(v1, kv_tables_obj);
+   to_variant(kv_tables_obj, v2);
 
-   //abi_serializer abis(abi, abi_serializer::create_yield_function(max_serialization_time));
-   //auto var2 = verify_byte_round_trip_conversion( abis, "abi_def", var );
-   //auto abi2 = var2.as<abi_def>();
+   std::stringstream ss1;
+   std::stringstream ss2;
+   ss1 << v1;
+   ss2 << v2;
+   string str1 = ss1.str();
+   string str2 = ss2.str();
 
-   std::cout << "========================="<< std::endl;
- /*
-   BOOST_TEST_REQUIRE(1u == abi.types.size());
-
-   BOOST_TEST("account_name" == abi.types[0].new_type_name);
-   BOOST_TEST("name" == abi.types[0].type);
-
-   BOOST_TEST_REQUIRE(3u == abi.structs.size());
-
-   BOOST_TEST("transfer_base" == abi.structs[0].name);
-   BOOST_TEST("" == abi.structs[0].base);
-   BOOST_TEST_REQUIRE(1u == abi.structs[0].fields.size());
-   BOOST_TEST("memo" == abi.structs[0].fields[0].name);
-   BOOST_TEST("string" == abi.structs[0].fields[0].type);
-
-   BOOST_TEST("transfer" == abi.structs[1].name);
-   BOOST_TEST("transfer_base" == abi.structs[1].base);
-   BOOST_TEST_REQUIRE(3u == abi.structs[1].fields.size());
-   BOOST_TEST("from" == abi.structs[1].fields[0].name);
-   BOOST_TEST("account_name" == abi.structs[1].fields[0].type);
-   BOOST_TEST("to" == abi.structs[1].fields[1].name);
-   BOOST_TEST("account_name" == abi.structs[1].fields[1].type);
-   BOOST_TEST("amount" == abi.structs[1].fields[2].name);
-   BOOST_TEST("uint64" == abi.structs[1].fields[2].type);
-
-   BOOST_TEST("account" == abi.structs[2].name);
-   BOOST_TEST("" == abi.structs[2].base);
-   BOOST_TEST_REQUIRE(2u == abi.structs[2].fields.size());
-   BOOST_TEST("account" == abi.structs[2].fields[0].name);
-   BOOST_TEST("name" == abi.structs[2].fields[0].type);
-   BOOST_TEST("balance" == abi.structs[2].fields[1].name);
-   BOOST_TEST("uint64" == abi.structs[2].fields[1].type);
-
-   BOOST_TEST_REQUIRE(1u == abi.actions.size());
-   BOOST_TEST(name("transfer") == abi.actions[0].name);
-   BOOST_TEST("transfer" == abi.actions[0].type);
-
-   BOOST_TEST_REQUIRE(1u == abi.tables.size());
-   BOOST_TEST(name("account") == abi.tables[0].name);
-   BOOST_TEST("account" == abi.tables[0].type);
-   BOOST_TEST("i64" == abi.tables[0].index_type);
-   BOOST_TEST_REQUIRE(1u == abi.tables[0].key_names.size());
-   BOOST_TEST("account" == abi.tables[0].key_names[0]);
-   BOOST_TEST_REQUIRE(1u == abi.tables[0].key_types.size());
-   BOOST_TEST("name" == abi.tables[0].key_types[0]);
-*/
-
-   //BOOST_TEST_REQUIRE(2u == abi.kv_tables.value.size());
-
+   BOOST_TEST(str1 == str2);
+   BOOST_TEST(2u == abi.kv_tables.value.size());
    name tbl_name = name("kvtable1");
-
-
-   bool test =  abi.kv_tables.value.end() != abi.kv_tables.value.find(tbl_name);
-   std::cout << "test = " << test << std::endl;
-   BOOST_TEST(test);
-
-   test = ("pida" == abi.kv_tables.value[tbl_name].primary_index.name.to_string());
-   BOOST_TEST(test);
-
-   test = ("name" == abi.kv_tables.value[tbl_name].primary_index.type);
-   BOOST_TEST(test);
-
-   test = (3u == abi.kv_tables.value[tbl_name].secondary_indices.size());
-   BOOST_TEST(test);
-
-   test = ("string" == abi.kv_tables.value[tbl_name].secondary_indices[name("sid1")].type);
-   BOOST_TEST(test);
-/*
+   BOOST_TEST("pida" == abi.kv_tables.value[tbl_name].primary_index.name.to_string());
+   BOOST_TEST("name" == abi.kv_tables.value[tbl_name].primary_index.type);
+   BOOST_TEST(3u == abi.kv_tables.value[tbl_name].secondary_indices.size());
+   BOOST_TEST("string" == abi.kv_tables.value[tbl_name].secondary_indices[name("sid1")].type);
    BOOST_TEST("uint32" == abi.kv_tables.value[tbl_name].secondary_indices[name("sid2")].type);
    BOOST_TEST("name" == abi.kv_tables.value[tbl_name].secondary_indices[name("sid3")].type);
 
-
    tbl_name = name("kvtable2");
-
-   BOOST_TEST( abi.kv_tables.value.end() != abi.kv_tables.value.find(tbl_name));
-   BOOST_TEST("pidb" == abi.kv_tables.value[tbl_name].primary_index.name);
+   BOOST_TEST("pidb" == abi.kv_tables.value[tbl_name].primary_index.name.to_string());
    BOOST_TEST("name" == abi.kv_tables.value[tbl_name].primary_index.type);
    BOOST_TEST_REQUIRE(3u == abi.kv_tables.value[tbl_name].secondary_indices.size());
-
    BOOST_TEST("int32" == abi.kv_tables.value[tbl_name].secondary_indices[name("sida")].type);
    BOOST_TEST("uint64" == abi.kv_tables.value[tbl_name].secondary_indices[name("sidb")].type);
    BOOST_TEST("sha256" == abi.kv_tables.value[tbl_name].secondary_indices[name("sidc")].type);
-   */
 
-   std::cout << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
-} FC_LOG_AND_RETHROW() }
+    std::cout << "*********** to_variant tested success" << std::endl;
+
+   abi_serializer abis(abi, abi_serializer::create_yield_function(max_serialization_time));
+   auto var2 = verify_byte_round_trip_conversion( abis, "abi_def", var );
+   auto abi2 = var2.as<abi_def>();
+
+
+
+   }
+   FC_LOG_AND_RETHROW()
+   }
 
 struct action1 {
    action1() = default;
